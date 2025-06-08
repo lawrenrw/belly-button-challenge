@@ -1,53 +1,136 @@
-<!DOCTYPE html>
-<html lang="en">
+// Build the metadata panel
+function buildMetadata(sample) {
+  d3.json("https://static.bc-edx.com/data/dl-1-2/m14/lms/starter/samples.json").then((data) => {
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>Bellybutton Biodiversity</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-</head>
+    // get the metadata field
 
-<body>
+    const metadata = data.metadata;
 
-  <div class="container">
-    <div class="row">
-      <div class="col-md-12 p-5 text-center bg-light">
-        <h1>Belly Button Biodiversity Dashboard</h1>
-        <p>Use the interactive charts below to explore the dataset</p>
-      </div>
-    </div>
-    <br>
-    <div class="row">
-      <div class="col-md-3">
-        <div class="card card-body bg-light">
-          <h6>Test Subject ID Number:</h6>
-          <select id="selDataset" onchange="optionChanged(this.value)"></select>
-        </div>
-        <br>
-        <div class="card card-primary">
-          <div class="card-header">
-            <h4 class="card-title">Demographic Info</h4>
-          </div>
-          <div id="sample-metadata" class="card-body"></div>
-        </div>
-      </div>
-      <div class="col-md-9">
-        <div id="bar"></div>
-      </div>
-    </div>
-    <div class="row">
-      <div class="col-md-12">
-        <div id="bubble"></div>
-      </div>
-    </div>
-  </div>
+    // Filter the metadata for the object with the desired sample number
 
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
-  <script src="./static/js/app.js"></script>
+    const resultArray = metadata.filter(obj => obj.id == sample);
+    const result = resultArray[0];
+    // Use d3 to select the panel with id of `#sample-metadata`
 
-</body>
+    const panel = d3.select("#sample-metadata");
+    // Use `.html("") to clear any existing metadata
 
-</html>
+    panel.html("");
+
+    // Inside a loop, you will need to use d3 to append new
+    // tags for each key-value in the filtered metadata.
+    Object.entries(result).forEach(([key, value]) => {
+      panel.append("p").text(`${key.toUpperCase()}: ${value}`);
+    });
+  });
+}
+
+// function to build both charts
+function buildCharts(sample) {
+  d3.json("https://static.bc-edx.com/data/dl-1-2/m14/lms/starter/samples.json").then((data) => {
+
+    // Get the samples field
+
+    const samples = data.samples;
+
+    // Filter the samples for the object with the desired sample number
+
+    const resultArray = samples.filter(obj => obj.id === sample);
+    const result = resultArray[0];
+    // Get the otu_ids, otu_labels, and sample_values
+
+    const otu_ids = result.otu_ids;
+    const otu_labels = result.otu_labels;
+    const sample_values = result.sample_values;
+
+    // Build a Bubble Chart
+
+
+    // Render the Bubble Chart
+    const bubbleLayout = {
+      title: "Bacteria Cultures Per Sample",
+      xaxis: { title: "OTU ID" },
+      hovermode: "closest"
+    };
+
+    const bubbleData = [{
+      x: otu_ids,
+      y: sample_values,
+      text: otu_labels,
+      mode: "markers",
+      marker: {
+        size: sample_values,
+        color: otu_ids,
+        colorscale: "Earth"
+      }
+    }];
+
+    Plotly.newPlot("bubble", bubbleData, bubbleLayout);
+
+    // For the Bar Chart, map the otu_ids to a list of strings for your yticks
+
+
+    // Build a Bar Chart
+    // Don't forget to slice and reverse the input data appropriately
+
+
+    // Render the Bar Chart
+
+    const yticks = otu_ids.slice(0, 10).map(id => `OTU ${id}`).reverse();
+    const barData = [{
+      y: yticks,
+      x: sample_values.slice(0, 10).reverse(),
+      text: otu_labels.slice(0, 10).reverse(),
+      type: "bar",
+      orientation: "h"
+    }];
+
+    const barLayout = {
+      title: "Top 10 Bacteria Cultures Found",
+      margin: { t: 30, l: 150 }
+    };
+
+    Plotly.newPlot("bar", barData, barLayout);
+  });
+}
+// Function to run on page load
+function init() {
+  d3.json("https://static.bc-edx.com/data/dl-1-2/m14/lms/starter/samples.json").then((data) => {
+
+    // Get the names field
+
+    const sampleNames = data.names;
+
+    // Use d3 to select the dropdown with id of `#selDataset`
+
+    const selector = d3.select("#selDataset");
+
+    // Use the list of sample names to populate the select options
+    // Hint: Inside a loop, you will need to use d3 to append a new
+    // option for each sample name.
+
+    sampleNames.forEach((sample) => {
+      selector
+        .append("option")
+        .text(sample)
+        .property("value", sample);
+    });
+    // Get the first sample from the list
+
+    const firstSample = sampleNames[0];
+    // Build charts and metadata panel with the first sample
+
+    buildCharts(firstSample);
+    buildMetadata(firstSample);
+  });
+}
+// Function for event listener
+function optionChanged(newSample) {
+  // Build charts and metadata panel each time a new sample is selected
+  
+  buildCharts(newSample);
+  buildMetadata(newSample);
+}
+
+// Initialize the dashboard
+init();
